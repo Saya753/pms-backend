@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Annotated
 
 from app.database.session import get_db
 from app.modules.users.services import UserService
+from app.core.dependencies import get_current_user
+from app.modules.users.models import User
 from app.modules.auth.schemas import (
     LoginRequest,
     LoginResponse,
@@ -46,3 +49,15 @@ async def login(
         email=data.email,
         password=data.password,
     )
+    
+@auth_router.get(
+    "/me",
+    response_model=RegisterResponse,
+)
+async def get_me(
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+):
+    return current_user
