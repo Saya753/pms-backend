@@ -187,4 +187,25 @@ async def get_refresh_token_credentials(
             detail="Invalid refresh token",
         )
 
-    return token
+    user_id = payload.get("sub")
+    jti = payload.get("jti")
+
+    if not user_id or not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token payload",
+        )
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID",
+        )
+
+    return {
+        "user_id": user_id,
+        "jti": jti,
+        "token": token,
+    }

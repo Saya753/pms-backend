@@ -234,27 +234,42 @@ async def get_me(
     return current_user
 
 
-# @auth_router.post(
-#     "/logout",
-#     response_model=LogoutResponse,
-# )
-# async def logout(
-#     data: LogoutRequest,
-# ):
-#     return LogoutResponse(
-#         message="Successfully logged out",
-#     )
-
 @auth_router.post(
     "/logout",
     response_model=LogoutResponse,
 )
 async def logout(
-    refresh_token: Annotated[
-        str,
+    refresh_data: Annotated[
+        dict,
         Depends(get_refresh_token_credentials),
     ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
 ):
+    jti = refresh_data["jti"]
+
+    refresh_repository = RefreshTokenRepository(db)
+
+    stored_token = await refresh_repository.get_by_jti(jti)
+
+    if not stored_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found",
+        )
+
+    if stored_token.revoked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has already been revoked",
+        )
+
+    await refresh_repository.revoke(stored_token)
+
+    await db.commit()
+
     return LogoutResponse(
         message="Successfully logged out",
     )
