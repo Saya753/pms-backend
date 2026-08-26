@@ -4,17 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.users.models import User
 from app.modules.users.repositories import UserRepository
 from app.modules.users.schemas import UserRegister
-
+from app.modules.auth.repositories import RefreshTokenRepository
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     hash_password,
     verify_password,
+    create_refresh_token_data,
+    hash_refresh_token
 )
 
 class UserService:
 
     def __init__(self, db: AsyncSession):
+        self.db = db
         self.repository = UserRepository(db)
 
     async def register(
@@ -93,10 +96,20 @@ class UserService:
 
         access_token = create_access_token(user.id)
 
-        refresh_token = create_refresh_token(user.id)
+        refresh_data = create_refresh_token_data(user.id)
+
+        refresh_token_repository = RefreshTokenRepository(self.db)
+
+        await refresh_token_repository.create(
+            user_id=user.id,
+            jti=refresh_data["jti"],
+            token_hash=hash_refresh_token(refresh_data["token"]),
+            expires_at=refresh_data["expires_at"],
+        )
+        await self.db.commit()
 
         return {
             "access_token": access_token,
-            "refresh_token": refresh_token,
+            "refresh_token": refresh_data["token"],
             "token_type": "bearer",
         }

@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+import datetime
 from app.modules.users.models import User
-
+from app.modules.auth.models import RefreshToken
 
 class UserRepository:
 
@@ -55,14 +55,22 @@ class UserRepository:
 
     async def create(
         self,
-        user: User,
-    ) -> User:
+        user_id: int,
+        jti: str,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> RefreshToken:
 
-        self.db.add(user)
+        refresh_token = RefreshToken(
+            user_id=user_id,
+            jti=jti,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
 
-        await self.db.commit()
+        self.db.add(refresh_token)
 
-        await self.db.refresh(user)
+        await self.db.flush()
+        await self.db.refresh(refresh_token)
 
-        return user
-    
+        return refresh_token
