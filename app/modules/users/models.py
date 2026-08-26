@@ -28,7 +28,14 @@ class User(Base):
         index=True,
     )
 
-    password: Mapped[str] = mapped_column(
+    phone: Mapped[str] = mapped_column(
+            String(20),
+            unique=True,
+            nullable=False,
+            index=True,
+        )
+
+    hashed_password: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )

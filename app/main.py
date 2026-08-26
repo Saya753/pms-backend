@@ -3,6 +3,7 @@ from sqlalchemy import text
 
 from app.database.database import engine
 
+from app.modules.auth.controller import auth_router
 
 app = FastAPI(
     title="Project Management System",
@@ -10,6 +11,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(auth_router)
 
 @app.get("/")
 async def root():
