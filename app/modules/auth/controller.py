@@ -4,7 +4,7 @@ from typing import Annotated
 
 from app.database.session import get_db
 from app.modules.users.services import UserService
-from app.core.dependencies import get_current_user, get_refresh_token
+from app.core.dependencies import get_current_user, get_refresh_token, get_refresh_token_credentials
 from app.core.security import create_access_token, create_refresh_token
 from app.modules.users.models import User
 from app.modules.users.repositories import UserRepository
@@ -13,6 +13,8 @@ from app.modules.auth.schemas import (
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
+    LogoutRequest,
+    LogoutResponse
 )
 
 
@@ -103,3 +105,28 @@ async def get_me(
 ):
     return current_user
 
+
+# @auth_router.post(
+#     "/logout",
+#     response_model=LogoutResponse,
+# )
+# async def logout(
+#     data: LogoutRequest,
+# ):
+#     return LogoutResponse(
+#         message="Successfully logged out",
+#     )
+
+@auth_router.post(
+    "/logout",
+    response_model=LogoutResponse,
+)
+async def logout(
+    refresh_token: Annotated[
+        str,
+        Depends(get_refresh_token_credentials),
+    ],
+):
+    return LogoutResponse(
+        message="Successfully logged out",
+    )
