@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class OrganizationCreate(BaseModel):
@@ -7,7 +7,11 @@ class OrganizationCreate(BaseModel):
         max_length=150,
     )
 
-    description: str | None = None
+    description: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
+
     
     
 class OrganizationUpdate(BaseModel):
@@ -27,6 +31,6 @@ class OrganizationResponse(BaseModel):
     description: str | None
     owner_id: int
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
