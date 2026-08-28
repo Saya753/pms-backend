@@ -4,6 +4,7 @@ from sqlalchemy import text
 from app.database.database import engine
 
 from app.modules.auth.controller import auth_router
+from app.modules.organizations.controller import organization_router
 
 app = FastAPI(
     title="Project Management System",
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(organization_router)
 
 @app.get("/")
 async def root():
