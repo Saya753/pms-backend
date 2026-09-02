@@ -2,9 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.projects.repositories import ProjectRepository
-from app.modules.projects.schemas import ProjectCreate
+from app.modules.projects.schemas import ProjectCreate, ProjectUpdate
 from app.modules.organizations.repositories import OrganizationRepository
 from app.modules.projects.models import Project
+
 
 class ProjectService:
 
@@ -71,3 +72,49 @@ class ProjectService:
         return await self.repository.get_organization_projects(
             organization_id=organization_id,
         )
+        
+    async def update_project(
+        self,
+        organization_id: int,
+        project_id: int,
+        current_user_id: int,
+        data: ProjectUpdate,
+    ) -> Project:
+
+        has_permission = await self.organization_repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="project.update",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to update projects",
+            )
+
+        project = await self.repository.get_project(
+            project_id=project_id,
+            organization_id=organization_id,
+        )
+
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
+
+        updated_project = await self.repository.update_project(
+            project=project,
+            name=data.name,
+            description=data.description,
+            budget=data.budget,
+            start_date=data.start_date,
+            end_date=data.end_date,
+            status=data.status,
+        )
+
+        await self.db.commit()
+        await self.db.refresh(updated_project)
+
+        return updated_project

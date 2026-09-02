@@ -8,8 +8,9 @@ from app.core.dependencies import get_current_user
 from app.modules.projects.schemas import (
     ProjectCreate,
     ProjectResponse,
+    ProjectUpdate,
 )
-from app.modules.projects.services import ProjectService
+from app.modules.projects.services import ProjectService, ProjectUpdate
 from app.modules.users.models import User
 
 
@@ -52,4 +53,24 @@ async def get_organization_projects(
     return await service.get_organization_projects(
         organization_id=organization_id,
         current_user_id=current_user.id,
+    )
+    
+@project_router.patch(
+    "/{project_id}",
+    response_model=ProjectResponse,
+)
+async def update_project(
+    organization_id: int,
+    project_id: int,
+    data: ProjectUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.update_project(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+        data=data,
     )
