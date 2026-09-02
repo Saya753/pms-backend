@@ -385,3 +385,38 @@ class ProjectService:
         await self.repository.delete_project_member(project_member)
 
         await self.db.commit()
+        
+    async def get_project_members(
+        self,
+        organization_id: int,
+        project_id: int,
+        current_user_id: int,
+    ) -> list[ProjectMember]:
+
+        # User must be a member of the organization
+        organization_member = await self.organization_repository.get_member(
+            organization_id=organization_id,
+            user_id=current_user_id,
+        )
+
+        if organization_member is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this organization",
+            )
+
+        # Make sure the project belongs to this organization
+        project = await self.repository.get_project(
+            project_id=project_id,
+            organization_id=organization_id,
+        )
+
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
+
+        return await self.repository.get_project_members(
+            project_id=project_id,
+        )

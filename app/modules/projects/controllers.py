@@ -158,3 +158,21 @@ async def remove_project_member(
         target_user_id=user_id,
         current_user_id=current_user.id,
     )
+    
+@project_router.get(
+    "/{project_id}/members",
+    response_model=list[ProjectMemberResponse],
+)
+async def get_project_members(
+    organization_id: int,
+    project_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.get_project_members(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+    )
