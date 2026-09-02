@@ -313,3 +313,65 @@ class OrganizationService:
         return await self.repository.get_organization_members(
             organization_id=organization_id
         )
+        
+    async def remove_member(
+        self,
+        organization_id: int,
+        target_user_id: int,
+        current_user_id: int,
+    ) -> None:
+
+        # 1. بررسی Permission
+        has_permission = await self.repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="member.remove",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to remove members",
+            )
+
+        # 2. پیدا کردن عضو هدف
+        target_member = await self.repository.get_member(
+            organization_id=organization_id,
+            user_id=target_user_id,
+        )
+
+        if not target_member:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Member not found in this organization",
+            )
+
+        # 3. گرفتن نقش عضو هدف
+        target_role = await self.repository.get_role_by_id(
+            target_member.role_id
+        )
+
+        if not target_role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Member role not found",
+            )
+
+        # 4. OWNER قابل حذف نیست
+        if target_role.name == "OWNER":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The organization owner cannot be removed",
+            )
+
+        # 5. OWNER خودش هم از این endpoint حذف نشود
+        if target_user_id == current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot remove yourself from the organization",
+            )
+
+        # 6. حذف عضو
+        await self.repository.delete_member(target_member)
+
+        await self.db.commit()

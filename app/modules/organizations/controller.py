@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -195,5 +195,23 @@ async def get_organization_members(
 
     return await service.get_organization_members(
         organization_id=organization_id,
+        current_user_id=current_user.id,
+    )
+    
+@organization_router.delete(
+    "/{organization_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_organization_member(
+    organization_id: int,
+    user_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = OrganizationService(db)
+
+    await service.remove_member(
+        organization_id=organization_id,
+        target_user_id=user_id,
         current_user_id=current_user.id,
     )

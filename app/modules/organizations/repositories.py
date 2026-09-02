@@ -285,3 +285,9 @@ class OrganizationRepository:
         )
 
         return list(result.scalars().all())
+    
+    async def delete_member(
+        self,
+        member: OrganizationMember,
+    ) -> None:
+        await self.db.delete(member)
