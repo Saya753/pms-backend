@@ -59,3 +59,20 @@ class OrganizationInvitationResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+    
+
+class RoleResponse(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrganizationMemberResponse(BaseModel):
+    id: int
+    organization_id: int
+    user_id: int
+    role: RoleResponse
+    joined_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

@@ -291,3 +291,25 @@ class OrganizationService:
         await self.db.commit()
 
         return invitation
+    
+    async def get_organization_members(
+        self,
+        organization_id: int,
+        current_user_id: int,
+    ) -> list[OrganizationMember]:
+
+        has_permission = await self.repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="member.read",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to view organization members",
+            )
+
+        return await self.repository.get_organization_members(
+            organization_id=organization_id
+        )

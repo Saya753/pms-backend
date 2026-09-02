@@ -13,6 +13,7 @@ from app.modules.organizations.schemas import (
     OrganizationResponse,
     InvitationCreate,
     OrganizationInvitationResponse,
+    OrganizationMemberResponse,
 )
 
 from app.modules.organizations.services import (
@@ -172,4 +173,27 @@ async def reject_invitation(
     return await service.reject_invitation(
         invitation_id=invitation_id,
         user_id=current_user.id,
+    )
+    
+@organization_router.get(
+    "/{organization_id}/members",
+    response_model=list[OrganizationMemberResponse],
+)
+async def get_organization_members(
+    organization_id: int,
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+
+    service = OrganizationService(db)
+
+    return await service.get_organization_members(
+        organization_id=organization_id,
+        current_user_id=current_user.id,
     )
