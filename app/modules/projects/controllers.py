@@ -138,3 +138,23 @@ async def update_project_member_role(
         current_user_id=current_user.id,
         data=data,
     )
+    
+@project_router.delete(
+    "/{project_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_project_member(
+    organization_id: int,
+    project_id: int,
+    user_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    await service.remove_project_member(
+        organization_id=organization_id,
+        project_id=project_id,
+        target_user_id=user_id,
+        current_user_id=current_user.id,
+    )

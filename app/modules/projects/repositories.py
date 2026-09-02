@@ -204,3 +204,10 @@ class ProjectRepository:
         await self.db.refresh(project_member)
 
         return project_member
+    
+    async def delete_project_member(
+        self,
+        project_member: ProjectMember,
+    ) -> None:
+        await self.db.delete(project_member)
+        await self.db.flush()
