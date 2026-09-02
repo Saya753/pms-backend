@@ -37,3 +37,19 @@ async def create_project(
         current_user_id=current_user.id,
         data=data,
     )
+    
+@project_router.get(
+    "",
+    response_model=list[ProjectResponse],
+)
+async def get_organization_projects(
+    organization_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.get_organization_projects(
+        organization_id=organization_id,
+        current_user_id=current_user.id,
+    )

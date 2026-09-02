@@ -38,3 +38,65 @@ class ProjectRepository:
         await self.db.refresh(project)
 
         return project
+    
+    async def get_organization_projects(
+        self,
+        organization_id: int,
+    ) -> list[Project]:
+
+        result = await self.db.execute(
+            select(Project)
+            .where(Project.organization_id == organization_id)
+            .order_by(Project.created_at.desc())
+        )
+
+        return list(result.scalars().all())
+    
+    async def get_project(
+        self,
+        project_id: int,
+        organization_id: int,
+    ) -> Project | None:
+        result = await self.db.execute(
+            select(Project)
+            .where(
+                Project.id == project_id,
+                Project.organization_id == organization_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+    
+    async def update_project(
+        self,
+        project: Project,
+        name: str | None,
+        description: str | None,
+        budget: float | None,
+        start_date,
+        end_date,
+        status: str | None,
+    ) -> Project:
+
+        if name is not None:
+            project.name = name
+
+        if description is not None:
+            project.description = description
+
+        if budget is not None:
+            project.budget = budget
+
+        if start_date is not None:
+            project.start_date = start_date
+
+        if end_date is not None:
+            project.end_date = end_date
+
+        if status is not None:
+            project.status = status
+
+        await self.db.flush()
+        await self.db.refresh(project)
+
+        return project

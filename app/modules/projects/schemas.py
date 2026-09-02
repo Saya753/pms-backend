@@ -25,6 +25,15 @@ class ProjectCreate(BaseModel):
     budget: float | None = None
 
 
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    description: str | None = Field(default=None, max_length=2000)
+    budget: float | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    status: str | None = None
+    
+
 class ProjectResponse(BaseModel):
     id: int
     organization_id: int

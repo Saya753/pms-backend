@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.projects.repositories import ProjectRepository
 from app.modules.projects.schemas import ProjectCreate
 from app.modules.organizations.repositories import OrganizationRepository
+from app.modules.projects.models import Project
 
 class ProjectService:
 
@@ -47,3 +48,26 @@ class ProjectService:
         await self.db.refresh(project)
 
         return project
+    
+    async def get_organization_projects(
+        self,
+        organization_id: int,
+        current_user_id: int,
+    ) -> list[Project]:
+
+        # بررسی Permission
+        has_permission = await self.organization_repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="project.read",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to view projects",
+            )
+
+        return await self.repository.get_organization_projects(
+            organization_id=organization_id,
+        )
