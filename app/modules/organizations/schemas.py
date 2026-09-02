@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-
+from datetime import datetime
 
 class OrganizationCreate(BaseModel):
     name: str = Field(
@@ -12,7 +12,6 @@ class OrganizationCreate(BaseModel):
         max_length=1000,
     )
 
-    
     
 class OrganizationUpdate(BaseModel):
 
@@ -33,4 +32,30 @@ class OrganizationResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,
+    )
+    
+    
+class InvitationCreate(BaseModel):
+    username: str = Field(
+        min_length=3,
+        max_length=50,
+    )
+    role: str
+    # role_id: int = Field(
+    #     gt=0,
+    # )
+    
+
+class OrganizationInvitationResponse(BaseModel):
+    id: int
+    organization_id: int
+    invited_user_id: int
+    role_id: int
+    role: str
+    status: str
+    created_at: datetime
+    expires_at: datetime | None
+
+    model_config = ConfigDict(
+        from_attributes=True
     )

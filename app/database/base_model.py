@@ -7,6 +7,7 @@ from app.modules.organizations.models import (
     Role,
     Permission,
     role_permissions,
+    OrganizationInvitation,
 )
 
 __all__ = [

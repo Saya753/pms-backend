@@ -11,6 +11,8 @@ from app.modules.users.models import User
 from app.modules.organizations.schemas import (
     OrganizationCreate,
     OrganizationResponse,
+    InvitationCreate,
+    OrganizationInvitationResponse,
 )
 
 from app.modules.organizations.services import (
@@ -70,4 +72,104 @@ async def get_my_organizations(
 
     return await service.get_my_organizations(
         current_user.id
+    )
+    
+@organization_router.post(
+    "/{organization_id}/invitations",
+    response_model=OrganizationInvitationResponse,
+)
+async def invite_member(
+    organization_id: int,
+
+    data: InvitationCreate,
+
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+
+    service = OrganizationService(db)
+
+    return await service.invite_member(
+        organization_id=organization_id,
+        data=data,
+        current_user_id=current_user.id,
+    )
+    
+    
+@organization_router.get(
+    "/invitations",
+    response_model=list[OrganizationInvitationResponse],
+)
+async def get_my_invitations(
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+
+    service = OrganizationService(db)
+
+    return await service.get_my_invitations(
+        user_id=current_user.id
+    )
+    
+@organization_router.post(
+    "/invitations/{invitation_id}/accept",
+    response_model=OrganizationInvitationResponse,
+)
+async def accept_invitation(
+    invitation_id: int,
+
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+
+    service = OrganizationService(db)
+
+    return await service.accept_invitation(
+        invitation_id=invitation_id,
+        user_id=current_user.id,
+    )
+    
+@organization_router.post(
+    "/invitations/{invitation_id}/reject",
+    response_model=OrganizationInvitationResponse,
+)
+async def reject_invitation(
+    invitation_id: int,
+
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+
+    service = OrganizationService(db)
+
+    return await service.reject_invitation(
+        invitation_id=invitation_id,
+        user_id=current_user.id,
     )

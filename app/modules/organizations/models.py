@@ -158,6 +158,11 @@ class OrganizationMember(Base):
         index=True,
     )
 
+    role: Mapped["Role"] = relationship(
+        "Role",
+        lazy="selectin",
+    )
+    
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -170,4 +175,74 @@ class OrganizationMember(Base):
             "user_id",
             name="uq_organization_user",
         ),
+    )
+    
+    
+class OrganizationInvitation(Base):
+    __tablename__ = "organization_invitations"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+
+    organization_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "organizations.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    invited_user_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    invited_by: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+
+    role_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "roles.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    
+    role: Mapped["Role"] = relationship(
+        "Role",
+        lazy="selectin",
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="PENDING",
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    responded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )

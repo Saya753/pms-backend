@@ -53,24 +53,38 @@ class UserRepository:
 
         return result.scalar_one_or_none()
 
+    # async def create(
+    #     self,
+    #     user_id: int,
+    #     jti: str,
+    #     token_hash: str,
+    #     expires_at: datetime,
+    # ) -> RefreshToken:
+
+    #     refresh_token = RefreshToken(
+    #         user_id=user_id,
+    #         jti=jti,
+    #         token_hash=token_hash,
+    #         expires_at=expires_at,
+    #     )
+
+    #     self.db.add(refresh_token)
+
+    #     await self.db.flush()
+    #     await self.db.refresh(refresh_token)
+
+    #     return refresh_token
+
+
     async def create(
         self,
-        user_id: int,
-        jti: str,
-        token_hash: str,
-        expires_at: datetime,
-    ) -> RefreshToken:
+        user: User,
+    ) -> User:
 
-        refresh_token = RefreshToken(
-            user_id=user_id,
-            jti=jti,
-            token_hash=token_hash,
-            expires_at=expires_at,
-        )
+        self.db.add(user)
 
-        self.db.add(refresh_token)
+        await self.db.commit()
 
-        await self.db.flush()
-        await self.db.refresh(refresh_token)
+        await self.db.refresh(user)
 
-        return refresh_token
+        return user
