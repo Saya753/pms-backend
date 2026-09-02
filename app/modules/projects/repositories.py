@@ -100,3 +100,10 @@ class ProjectRepository:
         await self.db.refresh(project)
 
         return project
+    
+    async def delete_project(
+        self,
+        project: Project,
+    ) -> None:
+        await self.db.delete(project)
+        await self.db.flush()

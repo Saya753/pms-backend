@@ -118,3 +118,37 @@ class ProjectService:
         await self.db.refresh(updated_project)
 
         return updated_project
+    
+    async def delete_project(
+        self,
+        organization_id: int,
+        project_id: int,
+        current_user_id: int,
+    ) -> None:
+
+        has_permission = await self.organization_repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="project.delete",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to delete projects",
+            )
+
+        project = await self.repository.get_project(
+            project_id=project_id,
+            organization_id=organization_id,
+        )
+
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
+
+        await self.repository.delete_project(project)
+
+        await self.db.commit()

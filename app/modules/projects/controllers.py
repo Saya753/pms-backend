@@ -74,3 +74,21 @@ async def update_project(
         current_user_id=current_user.id,
         data=data,
     )
+    
+@project_router.delete(
+    "/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_project(
+    organization_id: int,
+    project_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    await service.delete_project(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+    )
