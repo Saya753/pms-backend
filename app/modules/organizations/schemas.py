@@ -46,27 +46,24 @@ class InvitationCreate(BaseModel):
     # )
     
 
-class OrganizationInvitationResponse(BaseModel):
-    id: int
-    organization_id: int
-    invited_user_id: int
-    role_id: int
-    role: str
-    status: str
-    created_at: datetime
-    expires_at: datetime | None
-
-    model_config = ConfigDict(
-        from_attributes=True
-    )
-    
-
 class RoleResponse(BaseModel):
     id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class OrganizationInvitationResponse(BaseModel):
+    id: int
+    organization_id: int
+    invited_user_id: int
+    role: RoleResponse
+    status: str
+    created_at: datetime
+    expires_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+    
 
 class OrganizationMemberResponse(BaseModel):
     id: int
