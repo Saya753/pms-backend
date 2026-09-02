@@ -11,6 +11,7 @@ from app.modules.projects.schemas import (
     ProjectUpdate,
     ProjectMemberCreate,
     ProjectMemberResponse,
+    ProjectMemberRoleUpdate,
 )
 from app.modules.projects.services import ProjectService, ProjectUpdate
 from app.modules.users.models import User
@@ -112,6 +113,28 @@ async def add_project_member(
     return await service.add_project_member(
         organization_id=organization_id,
         project_id=project_id,
+        current_user_id=current_user.id,
+        data=data,
+    )
+    
+@project_router.patch(
+    "/{project_id}/members/{user_id}/role",
+    response_model=ProjectMemberResponse,
+)
+async def update_project_member_role(
+    organization_id: int,
+    project_id: int,
+    user_id: int,
+    data: ProjectMemberRoleUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.update_project_member_role(
+        organization_id=organization_id,
+        project_id=project_id,
+        target_user_id=user_id,
         current_user_id=current_user.id,
         data=data,
     )

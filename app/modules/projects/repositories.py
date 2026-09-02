@@ -191,3 +191,16 @@ class ProjectRepository:
         )
 
         return list(result.scalars().all())
+    
+    async def update_project_member_role(
+        self,
+        project_member: ProjectMember,
+        role_id: int,
+    ) -> ProjectMember:
+
+        project_member.project_role_id = role_id
+
+        await self.db.flush()
+        await self.db.refresh(project_member)
+
+        return project_member
