@@ -2,9 +2,15 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.projects.repositories import ProjectRepository
-from app.modules.projects.schemas import ProjectCreate, ProjectUpdate
+from app.modules.projects.schemas import (
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+    ProjectMemberCreate,
+    ProjectMemberResponse,
+)
 from app.modules.organizations.repositories import OrganizationRepository
-from app.modules.projects.models import Project
+from app.modules.projects.models import Project, ProjectMember
 
 
 class ProjectService:
@@ -152,3 +158,97 @@ class ProjectService:
         await self.repository.delete_project(project)
 
         await self.db.commit()
+        
+    async def add_project_member(
+        self,
+        organization_id: int,
+        project_id: int,
+        current_user_id: int,
+        data: ProjectMemberCreate,
+    ) -> ProjectMember:
+
+        has_permission = await self.organization_repository.member_has_permission(
+            organization_id=organization_id,
+            user_id=current_user_id,
+            permission_name="project.update",
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to manage project members",
+            )
+
+        project = await self.repository.get_project(
+            project_id=project_id,
+            organization_id=organization_id,
+        )
+
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
+
+        organization_member = await self.organization_repository.get_member(
+            organization_id=organization_id,
+            user_id=data.user_id,
+        )
+
+        if organization_member is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not a member of this organization",
+            )
+
+        existing_member = await self.repository.get_project_member(
+            project_id=project_id,
+            user_id=data.user_id,
+        )
+
+        if existing_member is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User is already a member of this project",
+            )
+
+        project_role = await self.repository.get_project_role_by_name(
+            data.role
+        )
+
+        if project_role is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid project role",
+            )
+            
+        # PROJECT_MANAGER and TEAM_LEAD can only have one member
+        if data.role in {"PROJECT_MANAGER", "TEAM_LEAD"}:
+
+            existing_role_member = await self.repository.get_project_member_by_role(
+                project_id=project_id,
+                role_id=project_role.id,
+            )
+
+            if existing_role_member is not None:
+
+                if data.role == "PROJECT_MANAGER":
+                    detail = "This project already has a Project Manager"
+                else:
+                    detail = "This project already has a Team Lead"
+
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=detail,
+                )
+
+        project_member = await self.repository.create_project_member(
+            project_id=project_id,
+            user_id=data.user_id,
+            project_role_id=project_role.id,
+        )
+
+        await self.db.commit()
+        await self.db.refresh(project_member)
+
+        return project_member

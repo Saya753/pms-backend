@@ -9,6 +9,8 @@ from app.modules.projects.schemas import (
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,
+    ProjectMemberCreate,
+    ProjectMemberResponse,
 )
 from app.modules.projects.services import ProjectService, ProjectUpdate
 from app.modules.users.models import User
@@ -91,4 +93,25 @@ async def delete_project(
         organization_id=organization_id,
         project_id=project_id,
         current_user_id=current_user.id,
+    )
+    
+@project_router.post(
+    "/{project_id}/members",
+    response_model=ProjectMemberResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_project_member(
+    organization_id: int,
+    project_id: int,
+    data: ProjectMemberCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.add_project_member(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+        data=data,
     )

@@ -50,3 +50,29 @@ class ProjectResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
     )
+    
+    
+class ProjectRoleResponse(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectMemberCreate(BaseModel):
+    user_id: int
+    role: str
+
+
+class ProjectMemberResponse(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    project_role: ProjectRoleResponse
+    joined_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectMemberRoleUpdate(BaseModel):
+    role: str

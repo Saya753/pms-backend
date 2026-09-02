@@ -1,7 +1,11 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.projects.models import Project
+from app.modules.projects.models import (
+    Project,
+    ProjectMember,
+    ProjectRole,
+)
 
 
 class ProjectRepository:
@@ -107,3 +111,83 @@ class ProjectRepository:
     ) -> None:
         await self.db.delete(project)
         await self.db.flush()
+        
+    async def get_project_role_by_name(
+        self,
+        role_name: str,
+    ) -> ProjectRole | None:
+
+        result = await self.db.execute(
+            select(ProjectRole).where(
+                ProjectRole.name == role_name
+            )
+        )
+
+        return result.scalar_one_or_none()
+    
+    async def get_project_member_by_role(
+        self,
+        project_id: int,
+        role_id: int,
+    ) -> ProjectMember | None:
+
+        result = await self.db.execute(
+            select(ProjectMember)
+            .where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.project_role_id == role_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+    
+    async def get_project_member(
+        self,
+        project_id: int,
+        user_id: int,
+    ) -> ProjectMember | None:
+
+        result = await self.db.execute(
+            select(ProjectMember)
+            .where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == user_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+    
+    async def create_project_member(
+        self,
+        project_id: int,
+        user_id: int,
+        project_role_id: int,
+    ) -> ProjectMember:
+
+        project_member = ProjectMember(
+            project_id=project_id,
+            user_id=user_id,
+            project_role_id=project_role_id,
+        )
+
+        self.db.add(project_member)
+
+        await self.db.flush()
+        await self.db.refresh(project_member)
+
+        return project_member
+    
+    async def get_project_members(
+        self,
+        project_id: int,
+    ) -> list[ProjectMember]:
+
+        result = await self.db.execute(
+            select(ProjectMember)
+            .where(
+                ProjectMember.project_id == project_id
+            )
+            .order_by(ProjectMember.joined_at.asc())
+        )
+
+        return list(result.scalars().all())

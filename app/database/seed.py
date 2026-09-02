@@ -8,7 +8,7 @@ from app.modules.organizations.models import (
     Role,
     role_permissions,
 )
-
+from app.modules.projects.models import ProjectRole
 
 PERMISSIONS = {
     "organization.read": "View organization",
@@ -41,8 +41,6 @@ PERMISSIONS = {
 ROLES = {
     "OWNER": "Owner of the organization",
     "ADMIN": "Organization administrator",
-    "PROJECT_MANAGER": "Project manager",
-    "TEAM_LEAD": "Team leader",
     "MEMBER": "Regular organization member",
 }
 
@@ -89,33 +87,6 @@ ROLE_PERMISSIONS = {
         "task.assign",
         "report.read",
         "report.export",
-    ],
-
-    "PROJECT_MANAGER": [
-        "organization.read",
-        "member.read",
-        "project.read",
-        "project.create",
-        "project.update",
-        "project.delete",
-        "task.read",
-        "task.create",
-        "task.update",
-        "task.delete",
-        "task.assign",
-        "report.read",
-        "report.export",
-    ],
-
-    "TEAM_LEAD": [
-        "organization.read",
-        "member.read",
-        "project.read",
-        "task.read",
-        "task.create",
-        "task.update",
-        "task.assign",
-        "report.read",
     ],
 
     "MEMBER": [
@@ -192,9 +163,41 @@ async def seed():
             # ID تمام Roleها را ایجاد می‌کنیم
             await db.flush()
 
-
             # ---------------------------------
-            # 3. Create Role ↔ Permission
+            # 3. Create Project Roles
+            # ---------------------------------
+
+            PROJECT_ROLES = {
+                "PROJECT_MANAGER": "Project manager",
+                "TEAM_LEAD": "Team leader",
+                "PR_MEMBER": "Project member",
+            }
+
+            project_role_objects = {}
+
+            for role_name, description in PROJECT_ROLES.items():
+
+                result = await db.execute(
+                    select(ProjectRole).where(
+                        ProjectRole.name == role_name
+                    )
+                )
+
+                project_role = result.scalar_one_or_none()
+
+                if not project_role:
+                    project_role = ProjectRole(
+                        name=role_name,
+                        description=description,
+                    )
+
+                    db.add(project_role)
+
+                project_role_objects[role_name] = project_role
+
+            await db.flush()
+            # ---------------------------------
+            # 4. Create Role ↔ Permission
             # ---------------------------------
 
             for role_name, permission_names in ROLE_PERMISSIONS.items():
@@ -225,7 +228,7 @@ async def seed():
 
 
             # ---------------------------------
-            # 4. Commit Everything
+            # 5. Commit Everything
             # ---------------------------------
 
             await db.commit()
