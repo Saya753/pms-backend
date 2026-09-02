@@ -375,3 +375,79 @@ class OrganizationService:
         await self.repository.delete_member(target_member)
 
         await self.db.commit()
+        
+    async def update_member_role(
+        self,
+        organization_id: int,
+        target_user_id: int,
+        current_user_id: int,
+        role_name: str,
+    ) -> OrganizationMember:
+
+        # 1. فقط OWNER اجازه تغییر Role دارد
+        current_member = await self.repository.get_member(
+            organization_id=organization_id,
+            user_id=current_user_id,
+        )
+
+        if not current_member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this organization",
+            )
+
+        current_role = await self.repository.get_role_by_id(
+            current_member.role_id
+        )
+
+        if not current_role or current_role.name != "OWNER":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the organization owner can change member roles",
+            )
+
+        # 2. عضو هدف را پیدا کن
+        target_member = await self.repository.get_member(
+            organization_id=organization_id,
+            user_id=target_user_id,
+        )
+
+        if not target_member:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Member not found in this organization",
+            )
+
+        # 3. OWNER نمی‌تواند Role خودش را تغییر دهد
+        if target_user_id == current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot change your own role",
+            )
+
+        # 4. Role مقصد را پیدا کن
+        role = await self.repository.get_role_by_name(role_name)
+
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Role not found",
+            )
+
+        # 5. هیچ عضوی از طریق این endpoint نمی‌تواند OWNER شود
+        if role.name == "OWNER":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot assign the OWNER role",
+            )
+
+        # 6. تغییر Role
+        updated_member = await self.repository.update_member_role(
+            member=target_member,
+            role_id=role.id,
+        )
+
+        await self.db.commit()
+        await self.db.refresh(updated_member)
+
+        return updated_member

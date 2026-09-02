@@ -14,6 +14,7 @@ from app.modules.organizations.schemas import (
     InvitationCreate,
     OrganizationInvitationResponse,
     OrganizationMemberResponse,
+    OrganizationMemberRoleUpdate,
 )
 
 from app.modules.organizations.services import (
@@ -214,4 +215,24 @@ async def remove_organization_member(
         organization_id=organization_id,
         target_user_id=user_id,
         current_user_id=current_user.id,
+    )
+    
+@organization_router.patch(
+    "/{organization_id}/members/{user_id}/role",
+    response_model=OrganizationMemberResponse,
+)
+async def update_organization_member_role(
+    organization_id: int,
+    user_id: int,
+    data: OrganizationMemberRoleUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = OrganizationService(db)
+
+    return await service.update_member_role(
+        organization_id=organization_id,
+        target_user_id=user_id,
+        current_user_id=current_user.id,
+        role_name=data.role,
     )

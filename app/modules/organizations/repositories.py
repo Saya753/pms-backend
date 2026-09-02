@@ -291,3 +291,16 @@ class OrganizationRepository:
         member: OrganizationMember,
     ) -> None:
         await self.db.delete(member)
+        
+    async def update_member_role(
+        self,
+        member: OrganizationMember,
+        role_id: int,
+    ) -> OrganizationMember:
+
+        member.role_id = role_id
+
+        await self.db.flush()
+        await self.db.refresh(member)
+
+        return member
