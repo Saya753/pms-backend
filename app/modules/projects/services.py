@@ -9,6 +9,8 @@ from app.modules.projects.schemas import (
     ProjectMemberCreate,
     ProjectMemberResponse,
     ProjectMemberRoleUpdate,
+    ProjectRoleResponse, 
+    MyProjectResponse,
 )
 from app.modules.organizations.repositories import OrganizationRepository
 from app.modules.projects.models import Project, ProjectMember
@@ -420,3 +422,31 @@ class ProjectService:
         return await self.repository.get_project_members(
             project_id=project_id,
         )
+        
+    async def get_user_projects(
+        self,
+        user_id: int,
+    ) -> list[MyProjectResponse]:
+
+        projects = await self.repository.get_user_projects(
+            user_id=user_id,
+        )
+
+        return [
+            MyProjectResponse(
+                id=project.id,
+                organization_id=project.organization_id,
+                name=project.name,
+                description=project.description,
+                status=project.status,
+                priority=project.priority,
+                start_date=project.start_date,
+                end_date=project.end_date,
+                budget=float(project.budget) if project.budget is not None else None,
+                role=ProjectRoleResponse(
+                    id=role.id,
+                    name=role.name,
+                ),
+            )
+            for project, role in projects
+        ]

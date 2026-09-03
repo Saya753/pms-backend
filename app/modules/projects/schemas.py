@@ -76,3 +76,18 @@ class ProjectMemberResponse(BaseModel):
 
 class ProjectMemberRoleUpdate(BaseModel):
     role: str
+    
+    
+class MyProjectResponse(BaseModel):
+    id: int
+    organization_id: int
+    name: str
+    description: str | None
+    status: str
+    priority: str
+    start_date: date | None
+    end_date: date | None
+    budget: float | None
+    role: ProjectRoleResponse
+
+    model_config = ConfigDict(from_attributes=True)

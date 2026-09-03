@@ -211,3 +211,26 @@ class ProjectRepository:
     ) -> None:
         await self.db.delete(project_member)
         await self.db.flush()
+        
+    async def get_user_projects(
+        self,
+        user_id: int,
+    ) -> list[tuple[Project, ProjectRole]]:
+
+        result = await self.db.execute(
+            select(Project, ProjectRole)
+            .join(
+                ProjectMember,
+                ProjectMember.project_id == Project.id,
+            )
+            .join(
+                ProjectRole,
+                ProjectRole.id == ProjectMember.project_role_id,
+            )
+            .where(
+                ProjectMember.user_id == user_id,
+            )
+            .order_by(Project.created_at.desc())
+        )
+
+        return list(result.all())

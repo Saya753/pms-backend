@@ -5,7 +5,10 @@ from app.database.database import engine
 
 from app.modules.auth.controller import auth_router
 from app.modules.organizations.controller import organization_router
-from app.modules.projects.controllers import project_router
+from app.modules.projects.controllers import (
+    project_router,
+    my_project_router,
+)
 
 app = FastAPI(
     title="Project Management System",
@@ -16,6 +19,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(organization_router)
 app.include_router(project_router)
+app.include_router(my_project_router)
 
 @app.get("/")
 async def root():

@@ -12,8 +12,9 @@ from app.modules.projects.schemas import (
     ProjectMemberCreate,
     ProjectMemberResponse,
     ProjectMemberRoleUpdate,
+    MyProjectResponse,
 )
-from app.modules.projects.services import ProjectService, ProjectUpdate
+from app.modules.projects.services import ProjectService
 from app.modules.users.models import User
 
 
@@ -22,6 +23,10 @@ project_router = APIRouter(
     tags=["Projects"],
 )
 
+my_project_router = APIRouter(
+    prefix="/users/me/projects",
+    tags=["My Projects"],
+)
 
 @project_router.post(
     "",
@@ -175,4 +180,18 @@ async def get_project_members(
         organization_id=organization_id,
         project_id=project_id,
         current_user_id=current_user.id,
+    )
+    
+@my_project_router.get(
+    "",
+    response_model=list[MyProjectResponse],
+)
+async def get_my_projects(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = ProjectService(db)
+
+    return await service.get_user_projects(
+        user_id=current_user.id,
     )
