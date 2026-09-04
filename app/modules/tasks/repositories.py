@@ -145,12 +145,17 @@ class TaskRepository:
 
         result = await self.db.execute(
             select(Task)
-            .where(Task.assignee_id == user_id)
-            .order_by(Task.due_date.asc(), Task.created_at.desc())
+            .where(
+                Task.assignee_id == user_id
+            )
+            .order_by(
+                Task.due_date.asc(),
+                Task.created_at.desc(),
+            )
         )
 
         return list(result.scalars().all())
-    
+        
     async def get_task_by_title(
         self,
         project_id: int,

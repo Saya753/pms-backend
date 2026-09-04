@@ -85,16 +85,17 @@ class TaskService:
         self,
         project_id: int,
         assignee_id: int | None,
-    ):
+    ) -> None:
+
         if assignee_id is None:
             return
 
-        member = await self.project_repository.get_project_member(
+        project_member = await self.project_repository.get_project_member(
             project_id=project_id,
             user_id=assignee_id,
         )
 
-        if member is None:
+        if project_member is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assignee must be a member of this project",
@@ -350,7 +351,7 @@ class TaskService:
             project_id=project_id,
         )
 
-        await self._get_project_manager_or_team_lead(
+        member = await self._get_project_member(
             project_id=project_id,
             user_id=current_user_id,
         )
@@ -364,6 +365,14 @@ class TaskService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found",
+            )
+
+        role_name = member.project_role.name
+
+        if role_name not in {"PROJECT_MANAGER", "TEAM_LEAD"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Project Manager or Team Lead can assign tasks",
             )
 
         await self._validate_assignee(
