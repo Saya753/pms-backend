@@ -11,6 +11,7 @@ from app.modules.organizations.models import (
 )
 from app.modules.tasks.models import Task
 from app.modules.comments.models import Comment
+from app.modules.attachments.models import Attachment
 
 __all__ = [
     "User",
