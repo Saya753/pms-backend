@@ -10,6 +10,7 @@ from app.modules.organizations.models import (
     OrganizationInvitation,
 )
 from app.modules.tasks.models import Task
+from app.modules.comments.models import Comment
 
 __all__ = [
     "User",

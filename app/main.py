@@ -13,6 +13,7 @@ from app.modules.tasks.controllers import (
     task_router,
     my_task_router,
 )
+from app.modules.comments.controllers import comment_router
 
 app = FastAPI(
     title="Project Management System",
@@ -26,6 +27,7 @@ app.include_router(project_router)
 app.include_router(my_project_router)
 app.include_router(task_router)
 app.include_router(my_task_router)
+app.include_router(comment_router)
 
 @app.get("/")
 async def root():
