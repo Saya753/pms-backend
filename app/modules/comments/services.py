@@ -8,6 +8,7 @@ from app.modules.comments.schemas import (
 )
 from app.modules.projects.repositories import ProjectRepository
 from app.modules.tasks.repositories import TaskRepository
+from app.modules.activity_logs.repositories import ActivityLogRepository
 
 
 class CommentService:
@@ -18,6 +19,7 @@ class CommentService:
         self.repository = CommentRepository(db)
         self.task_repository = TaskRepository(db)
         self.project_repository = ProjectRepository(db)
+        self.activity_repository = ActivityLogRepository(db)
 
     async def _get_task_or_404(
         self,
@@ -89,11 +91,23 @@ class CommentService:
             user_id=current_user_id,
         )
 
-        return await self.repository.create_comment(
+        comment = await self.repository.create_comment(
             task_id=task_id,
             user_id=current_user_id,
             content=data.content,
         )
+
+        # Activity Log
+        await self.activity_repository.create_log(
+            organization_id=organization_id,
+            project_id=project_id,
+            task_id=task_id,
+            user_id=current_user_id,
+            action="COMMENT_CREATED",
+            description="A comment was added to the task",
+        )
+
+        return comment
 
     async def get_task_comments(
         self,

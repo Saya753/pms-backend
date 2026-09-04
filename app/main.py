@@ -15,6 +15,7 @@ from app.modules.tasks.controllers import (
 )
 from app.modules.comments.controllers import comment_router
 from app.modules.attachments.controllers import attachment_router
+from app.modules.activity_logs.controllers import activity_log_router
 
 app = FastAPI(
     title="Project Management System",
@@ -30,6 +31,7 @@ app.include_router(task_router)
 app.include_router(my_task_router)
 app.include_router(comment_router)
 app.include_router(attachment_router)
+app.include_router(activity_log_router)
 
 @app.get("/")
 async def root():

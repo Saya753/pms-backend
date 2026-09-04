@@ -10,13 +10,14 @@ from app.modules.tasks.schemas import (
     TaskUpdate,
     MyTaskUpdate,
 )
-
+from app.modules.activity_logs.repositories import ActivityLogRepository
 
 class TaskService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repository = TaskRepository(db)
         self.project_repository = ProjectRepository(db)
+        self.activity_repository = ActivityLogRepository(db)
 
     # ---------------------------------------------------------
     # Helpers
@@ -143,11 +144,13 @@ class TaskService:
                     detail="A subtask cannot have another subtask as its parent",
                 )
 
+        # Validate assignee
         await self._validate_assignee(
             project_id=project_id,
             assignee_id=data.assignee_id,
         )
 
+        # Validate dates
         if (
             data.start_date is not None
             and data.due_date is not None
@@ -170,7 +173,7 @@ class TaskService:
                 detail="A task with this title already exists in this project",
             )
 
-        return await self.repository.create_task(
+        task = await self.repository.create_task(
             project_id=project_id,
             parent_id=data.parent_id,
             title=data.title,
@@ -183,6 +186,19 @@ class TaskService:
             assignee_id=data.assignee_id,
             created_by=current_user_id,
         )
+
+        # Activity Log
+        await self.activity_repository.create_log(
+            organization_id=organization_id,
+            project_id=project_id,
+            task_id=task.id,
+            user_id=current_user_id,
+            action="TASK_CREATED",
+            description=f'Task "{task.title}" was created',
+        )
+
+        return task
+                
 
     # ---------------------------------------------------------
     # List Project Tasks
@@ -311,6 +327,7 @@ class TaskService:
 
         # بررسی title تکراری
         if data.title is not None and data.title != task.title:
+
             existing_task = await self.repository.get_task_by_title(
                 project_id=project_id,
                 title=data.title,
@@ -322,7 +339,12 @@ class TaskService:
                     detail="A task with this title already exists in this project",
                 )
 
-        return await self.repository.update_task(
+        # ذخیره مقادیر قبلی قبل از update
+        old_status = task.status
+        old_progress = task.progress
+
+        # Update Task
+        task = await self.repository.update_task(
             task=task,
             title=data.title,
             description=data.description,
@@ -332,6 +354,42 @@ class TaskService:
             start_date=data.start_date,
             due_date=data.due_date,
         )
+
+        # Activity Log - Status
+        if data.status is not None and data.status != old_status:
+
+            await self.activity_repository.create_log(
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                user_id=current_user_id,
+                action="TASK_STATUS_CHANGED",
+                description=(
+                    f'Task "{task.title}" status changed '
+                    f"from {old_status} to {task.status}"
+                ),
+                old_value=old_status,
+                new_value=task.status,
+            )
+
+        # Activity Log - Progress
+        if data.progress is not None and data.progress != old_progress:
+
+            await self.activity_repository.create_log(
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                user_id=current_user_id,
+                action="TASK_PROGRESS_CHANGED",
+                description=(
+                    f'Task "{task.title}" progress changed '
+                    f"from {old_progress}% to {task.progress}%"
+                ),
+                old_value=str(old_progress),
+                new_value=str(task.progress),
+            )
+
+        return task
         
     # ---------------------------------------------------------
     # Assign Task
@@ -375,16 +433,43 @@ class TaskService:
                 detail="Only Project Manager or Team Lead can assign tasks",
             )
 
+        # Validate new assignee
         await self._validate_assignee(
             project_id=project_id,
             assignee_id=data.assignee_id,
         )
 
-        return await self.repository.assign_task(
+        # Save old value before update
+        old_assignee_id = task.assignee_id
+
+        task = await self.repository.assign_task(
             task=task,
             assignee_id=data.assignee_id,
         )
-        
+
+        # Activity Log
+        if old_assignee_id != data.assignee_id:
+            await self.activity_repository.create_log(
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                user_id=current_user_id,
+                action="TASK_ASSIGNED",
+                description=f'Task "{task.title}" assignment was changed',
+                old_value=(
+                    str(old_assignee_id)
+                    if old_assignee_id is not None
+                    else None
+                ),
+                new_value=(
+                    str(data.assignee_id)
+                    if data.assignee_id is not None
+                    else None
+                ),
+            )
+
+        return task
+                
     # ---------------------------------------------------------
     # Delete Task
     # ---------------------------------------------------------
@@ -435,6 +520,7 @@ class TaskService:
         
     async def update_my_task(
         self,
+        organization_id: int,
         task_id: int,
         current_user_id: int,
         data: MyTaskUpdate,
@@ -451,12 +537,53 @@ class TaskService:
                 detail="Task not found or task is not assigned to you",
             )
 
-        return await self.repository.update_task(
+        # Save old values before update
+        old_status = task.status
+        old_progress = task.progress
+
+        # Update only status and progress
+        task = await self.repository.update_task(
             task=task,
             status=data.status,
             progress=data.progress,
         )
-        
+
+        # Activity Log - Status
+        if data.status is not None and data.status != old_status:
+
+            await self.activity_repository.create_log(
+                organization_id=organization_id,
+                project_id=task.project_id,
+                task_id=task.id,
+                user_id=current_user_id,
+                action="TASK_STATUS_CHANGED",
+                description=(
+                    f'Task "{task.title}" status changed '
+                    f"from {old_status} to {task.status}"
+                ),
+                old_value=old_status,
+                new_value=task.status,
+            )
+
+        # Activity Log - Progress
+        if data.progress is not None and data.progress != old_progress:
+
+            await self.activity_repository.create_log(
+                organization_id=organization_id,
+                project_id=task.project_id,
+                task_id=task.id,
+                user_id=current_user_id,
+                action="TASK_PROGRESS_CHANGED",
+                description=(
+                    f'Task "{task.title}" progress changed '
+                    f"from {old_progress}% to {task.progress}%"
+                ),
+                old_value=str(old_progress),
+                new_value=str(task.progress),
+            )
+
+        return task
+    
     async def get_subtasks(
         self,
         organization_id: int,

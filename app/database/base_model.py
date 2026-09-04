@@ -12,6 +12,7 @@ from app.modules.organizations.models import (
 from app.modules.tasks.models import Task
 from app.modules.comments.models import Comment
 from app.modules.attachments.models import Attachment
+from app.modules.activity_logs.models import ActivityLog
 
 __all__ = [
     "User",

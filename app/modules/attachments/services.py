@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.attachments.repositories import AttachmentRepository
 from app.modules.projects.repositories import ProjectRepository
 from app.modules.tasks.repositories import TaskRepository
+from app.modules.activity_logs.repositories import ActivityLogRepository
 
 
 UPLOAD_DIR = Path("uploads")
@@ -38,6 +39,7 @@ class AttachmentService:
         self.repository = AttachmentRepository(db)
         self.task_repository = TaskRepository(db)
         self.project_repository = ProjectRepository(db)
+        self.activity_repository = ActivityLogRepository(db)
 
     async def _get_task_or_404(
         self,
@@ -153,10 +155,19 @@ class AttachmentService:
 
         file_path = UPLOAD_DIR / stored_filename
 
+        # Save physical file
         try:
             with open(file_path, "wb") as destination:
                 destination.write(file_content)
 
+        except Exception:
+            if file_path.exists():
+                file_path.unlink()
+
+            raise
+
+        # Create database record
+        try:
             attachment = await self.repository.create_attachment(
                 task_id=task_id,
                 uploaded_by=current_user_id,
@@ -167,13 +178,26 @@ class AttachmentService:
                 file_size=file_size,
             )
 
-            return attachment
-
         except Exception:
+            # DB record creation failed, so remove physical file
             if file_path.exists():
                 file_path.unlink()
 
             raise
+
+        # Activity Log
+        await self.activity_repository.create_log(
+            organization_id=organization_id,
+            project_id=project_id,
+            task_id=task_id,
+            user_id=current_user_id,
+            action="ATTACHMENT_UPLOADED",
+            description=(
+                f'Attachment "{attachment.original_filename}" was uploaded'
+            ),
+        )
+
+        return attachment
 
     async def get_task_attachments(
         self,
