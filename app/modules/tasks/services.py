@@ -11,6 +11,7 @@ from app.modules.tasks.schemas import (
     MyTaskUpdate,
 )
 from app.modules.activity_logs.repositories import ActivityLogRepository
+from app.modules.notifications.repositories import NotificationRepository
 
 class TaskService:
     def __init__(self, db: AsyncSession):
@@ -18,6 +19,7 @@ class TaskService:
         self.repository = TaskRepository(db)
         self.project_repository = ProjectRepository(db)
         self.activity_repository = ActivityLogRepository(db)
+        self.notification_repository = NotificationRepository(db)
 
     # ---------------------------------------------------------
     # Helpers
@@ -354,6 +356,25 @@ class TaskService:
             start_date=data.start_date,
             due_date=data.due_date,
         )
+        
+        if (
+            data.status is not None
+            and old_status != task.status
+            and task.assignee_id is not None
+            and task.assignee_id != current_user_id
+        ):
+            await self.notification_repository.create_notification(
+                user_id=task.assignee_id,
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                notification_type="TASK_STATUS_CHANGED",
+                title="Task Status Updated",
+                message=(
+                    f'Task "{task.title}" status changed '
+                    f'from {old_status} to {task.status}'
+                ),
+            )
 
         # Activity Log - Status
         if data.status is not None and data.status != old_status:
@@ -370,6 +391,25 @@ class TaskService:
                 ),
                 old_value=old_status,
                 new_value=task.status,
+            )
+            
+        if (
+            data.progress is not None
+            and old_progress != task.progress
+            and task.assignee_id is not None
+            and task.assignee_id != current_user_id
+        ):
+            await self.notification_repository.create_notification(
+                user_id=task.assignee_id,
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                notification_type="TASK_PROGRESS_CHANGED",
+                title="Task Progress Updated",
+                message=(
+                    f'Task "{task.title}" progress changed '
+                    f'from {old_progress}% to {task.progress}%'
+                ),
             )
 
         # Activity Log - Progress
@@ -446,6 +486,21 @@ class TaskService:
             task=task,
             assignee_id=data.assignee_id,
         )
+        
+        if (
+            data.assignee_id is not None
+            and data.assignee_id != old_assignee_id
+            and data.assignee_id != current_user_id
+        ):
+            await self.notification_repository.create_notification(
+                user_id=data.assignee_id,
+                organization_id=organization_id,
+                project_id=project_id,
+                task_id=task.id,
+                notification_type="TASK_ASSIGNED",
+                title="New Task Assigned",
+                message=f'You have been assigned to task "{task.title}"',
+            )
 
         # Activity Log
         if old_assignee_id != data.assignee_id:
