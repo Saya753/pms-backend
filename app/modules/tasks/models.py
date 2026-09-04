@@ -29,6 +29,14 @@ class Task(Base):
         index=True,
     )
 
+    # NULL = Main Task
+    # ID  = Subtask of that Task
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
@@ -93,7 +101,7 @@ class Task(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    
+
     __table_args__ = (
         UniqueConstraint(
             "project_id",

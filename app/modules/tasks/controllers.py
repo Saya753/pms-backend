@@ -218,3 +218,23 @@ async def update_my_task(
         current_user_id=current_user.id,
         data=data,
     )
+    
+@task_router.get(
+    "/{task_id}/subtasks",
+    response_model=list[TaskResponse],
+)
+async def get_subtasks(
+    organization_id: int,
+    project_id: int,
+    task_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = TaskService(db)
+
+    return await service.get_subtasks(
+        organization_id=organization_id,
+        project_id=project_id,
+        task_id=task_id,
+        current_user_id=current_user.id,
+    )

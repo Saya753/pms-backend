@@ -11,6 +11,7 @@ class TaskRepository:
     async def create_task(
         self,
         project_id: int,
+        parent_id: int | None,
         title: str,
         description: str | None,
         status: str,
@@ -24,6 +25,7 @@ class TaskRepository:
 
         task = Task(
             project_id=project_id,
+            parent_id=parent_id,
             title=title,
             description=description,
             status=status,
@@ -65,7 +67,10 @@ class TaskRepository:
 
         result = await self.db.execute(
             select(Task)
-            .where(Task.project_id == project_id)
+            .where(
+                Task.project_id == project_id,
+                Task.parent_id.is_(None),
+            )
             .order_by(Task.created_at.desc())
         )
 
@@ -171,3 +176,36 @@ class TaskRepository:
             )
         )
         return result.scalar_one_or_none()
+    
+    async def get_subtasks(
+        self,
+        project_id: int,
+        parent_id: int,
+    ) -> list[Task]:
+
+        result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.project_id == project_id,
+                Task.parent_id == parent_id,
+            )
+            .order_by(Task.created_at.asc())
+        )
+
+        return list(result.scalars().all())
+    
+    async def get_main_tasks(
+        self,
+        project_id: int,
+    ) -> list[Task]:
+
+        result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.project_id == project_id,
+                Task.parent_id.is_(None),
+            )
+            .order_by(Task.created_at.desc())
+        )
+
+        return list(result.scalars().all())

@@ -103,7 +103,6 @@ class TaskService:
     # ---------------------------------------------------------
     # Create Task
     # ---------------------------------------------------------
-
     async def create_task(
         self,
         organization_id: int,
@@ -122,6 +121,27 @@ class TaskService:
             user_id=current_user_id,
         )
 
+        # Validate parent task
+        if data.parent_id is not None:
+
+            parent_task = await self.repository.get_task(
+                task_id=data.parent_id,
+                project_id=project_id,
+            )
+
+            if parent_task is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parent task must belong to this project",
+                )
+
+            # فقط Main Task می‌تواند parent باشد
+            if parent_task.parent_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A subtask cannot have another subtask as its parent",
+                )
+
         await self._validate_assignee(
             project_id=project_id,
             assignee_id=data.assignee_id,
@@ -137,8 +157,21 @@ class TaskService:
                 detail="Due date cannot be earlier than start date",
             )
 
+        # Duplicate title
+        existing_task = await self.repository.get_task_by_title(
+            project_id=project_id,
+            title=data.title,
+        )
+
+        if existing_task is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A task with this title already exists in this project",
+            )
+
         return await self.repository.create_task(
             project_id=project_id,
+            parent_id=data.parent_id,
             title=data.title,
             description=data.description,
             status=data.status,
@@ -413,4 +446,45 @@ class TaskService:
             task=task,
             status=data.status,
             progress=data.progress,
+        )
+        
+    async def get_subtasks(
+        self,
+        organization_id: int,
+        project_id: int,
+        task_id: int,
+        current_user_id: int,
+    ) -> list[Task]:
+
+        await self._get_project_or_404(
+            organization_id=organization_id,
+            project_id=project_id,
+        )
+
+        await self._get_project_member(
+            project_id=project_id,
+            user_id=current_user_id,
+        )
+
+        parent_task = await self.repository.get_task(
+            task_id=task_id,
+            project_id=project_id,
+        )
+
+        if parent_task is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found",
+            )
+
+        # یک Subtask نمی‌تواند parent باشد
+        if parent_task.parent_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Subtasks cannot have child subtasks",
+            )
+
+        return await self.repository.get_subtasks(
+            project_id=project_id,
+            parent_id=task_id,
         )

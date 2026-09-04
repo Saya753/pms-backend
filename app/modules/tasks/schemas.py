@@ -20,28 +20,16 @@ TASK_PRIORITIES = {
 
 
 class TaskCreate(BaseModel):
-    title: str = Field(
-        min_length=2,
-        max_length=200,
-    )
+    title: str = Field(min_length=2, max_length=200)
+    description: str | None = Field(default=None, max_length=5000)
 
-    description: str | None = Field(
-        default=None,
-        max_length=5000,
-    )
+    parent_id: int | None = None
 
     status: str = "TODO"
-
     priority: str = "MEDIUM"
-
-    progress: int = Field(
-        default=0,
-        ge=0,
-        le=100,
-    )
+    progress: int = Field(default=0, ge=0, le=100)
 
     start_date: date | None = None
-
     due_date: date | None = None
 
     assignee_id: int | None = None
@@ -84,7 +72,6 @@ class TaskUpdate(BaseModel):
     )
 
     status: str | None = None
-
     priority: str | None = None
 
     progress: int | None = Field(
@@ -94,7 +81,6 @@ class TaskUpdate(BaseModel):
     )
 
     start_date: date | None = None
-
     due_date: date | None = None
 
     @field_validator("status")
@@ -128,6 +114,31 @@ class TaskUpdate(BaseModel):
         return value
 
 
+class MyTaskUpdate(BaseModel):
+    status: str | None = None
+
+    progress: int | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+    )
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = value.upper()
+
+        if value not in TASK_STATUSES:
+            raise ValueError(
+                f"Invalid status. Allowed values: {', '.join(sorted(TASK_STATUSES))}"
+            )
+
+        return value
+
+
 class TaskAssign(BaseModel):
     assignee_id: int | None = None
 
@@ -135,6 +146,7 @@ class TaskAssign(BaseModel):
 class TaskResponse(BaseModel):
     id: int
     project_id: int
+    parent_id: int | None
 
     title: str
     description: str | None
@@ -152,26 +164,4 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
-    
-    
-class MyTaskUpdate(BaseModel):
-    status: str | None = None
-    progress: int | None = Field(default=None, ge=0, le=100)
-
-    @field_validator("status")
-    @classmethod
-    def validate_status(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-
-        value = value.upper()
-
-        if value not in TASK_STATUSES:
-            raise ValueError(
-                f"Invalid status. Allowed values: {', '.join(sorted(TASK_STATUSES))}"
-            )
-
-        return value
+    model_config = ConfigDict(from_attributes=True)
