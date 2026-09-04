@@ -9,6 +9,7 @@ from app.modules.organizations.models import (
     role_permissions,
     OrganizationInvitation,
 )
+from app.modules.tasks.models import Task
 
 __all__ = [
     "User",
