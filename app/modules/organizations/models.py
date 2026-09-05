@@ -1,16 +1,15 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Column,
     DateTime,
     ForeignKey,
     String,
     Table,
-    Column,
     Text,
     UniqueConstraint,
     func,
 )
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -23,13 +22,11 @@ from app.database.base import Base
 role_permissions = Table(
     "role_permissions",
     Base.metadata,
-
     Column(
         "role_id",
         ForeignKey("roles.id", ondelete="CASCADE"),
         primary_key=True,
     ),
-
     Column(
         "permission_id",
         ForeignKey("permissions.id", ondelete="CASCADE"),
@@ -37,6 +34,10 @@ role_permissions = Table(
     ),
 )
 
+
+# =========================================================
+# Permission
+# =========================================================
 
 class Permission(Base):
     __tablename__ = "permissions"
@@ -58,6 +59,10 @@ class Permission(Base):
         nullable=True,
     )
 
+
+# =========================================================
+# Organization Role
+# =========================================================
 
 class Role(Base):
     __tablename__ = "roles"
@@ -84,6 +89,10 @@ class Role(Base):
         lazy="selectin",
     )
 
+
+# =========================================================
+# Organization
+# =========================================================
 
 class Organization(Base):
     __tablename__ = "organizations"
@@ -122,6 +131,10 @@ class Organization(Base):
         nullable=False,
     )
 
+
+# =========================================================
+# Organization Member
+# =========================================================
 
 class OrganizationMember(Base):
     __tablename__ = "organization_members"
@@ -162,7 +175,7 @@ class OrganizationMember(Base):
         "Role",
         lazy="selectin",
     )
-    
+
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -176,8 +189,12 @@ class OrganizationMember(Base):
             name="uq_organization_user",
         ),
     )
-    
-    
+
+
+# =========================================================
+# Organization Invitation
+# =========================================================
+
 class OrganizationInvitation(Base):
     __tablename__ = "organization_invitations"
 
@@ -210,6 +227,7 @@ class OrganizationInvitation(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
     )
 
     role_id: Mapped[int] = mapped_column(
@@ -218,8 +236,9 @@ class OrganizationInvitation(Base):
             ondelete="RESTRICT",
         ),
         nullable=False,
+        index=True,
     )
-    
+
     role: Mapped["Role"] = relationship(
         "Role",
         lazy="selectin",
@@ -229,6 +248,7 @@ class OrganizationInvitation(Base):
         String(20),
         default="PENDING",
         nullable=False,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

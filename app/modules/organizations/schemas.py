@@ -1,5 +1,11 @@
-from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+# =========================================================
+# Organization
+# =========================================================
 
 class OrganizationCreate(BaseModel):
     name: str = Field(
@@ -12,18 +18,20 @@ class OrganizationCreate(BaseModel):
         max_length=1000,
     )
 
-    
-class OrganizationUpdate(BaseModel):
 
+class OrganizationUpdate(BaseModel):
     name: str | None = Field(
         default=None,
         min_length=2,
         max_length=150,
     )
 
-    description: str | None = None
+    description: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
 
-    
+
 class OrganizationResponse(BaseModel):
     id: int
     name: str
@@ -33,24 +41,35 @@ class OrganizationResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
     )
-    
-    
-class InvitationCreate(BaseModel):
-    username: str = Field(
-        min_length=3,
-        max_length=50,
-    )
-    role: str
-    # role_id: int = Field(
-    #     gt=0,
-    # )
-    
+
+
+# =========================================================
+# Role
+# =========================================================
 
 class RoleResponse(BaseModel):
     id: int
     name: str
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+# =========================================================
+# Invitation
+# =========================================================
+
+class InvitationCreate(BaseModel):
+    username: str = Field(
+        min_length=3,
+        max_length=50,
+    )
+
+    role: str = Field(
+        min_length=1,
+        max_length=50,
+    )
 
 
 class OrganizationInvitationResponse(BaseModel):
@@ -71,9 +90,13 @@ class OrganizationInvitationResponse(BaseModel):
     inviter_name: str
 
     model_config = ConfigDict(
-        from_attributes=True
+        from_attributes=True,
     )
-    
+
+
+# =========================================================
+# Organization Members
+# =========================================================
 
 class OrganizationMemberResponse(BaseModel):
     id: int
@@ -87,12 +110,21 @@ class OrganizationMemberResponse(BaseModel):
 
     joined_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
-    
-    
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
 class OrganizationMemberRoleUpdate(BaseModel):
-    role: str
-    
-    
+    role: str = Field(
+        min_length=1,
+        max_length=50,
+    )
+
+
+# =========================================================
+# Invitation Badge
+# =========================================================
+
 class PendingInvitationCountResponse(BaseModel):
     count: int
