@@ -21,6 +21,7 @@ from app.modules.attachments.controllers import (
 from app.modules.activity_logs.controllers import activity_log_router
 from app.modules.notifications.controllers import router as notifications_router
 from app.modules.dashboard.controllers import dashboard_router
+from app.modules.reports.controllers import reports_router
 
 app = FastAPI(
     title="Project Management System",
@@ -47,6 +48,8 @@ app.include_router(activity_log_router)
 app.include_router(notifications_router)
 
 app.include_router(dashboard_router)
+
+app.include_router(reports_router)
 
 @app.get("/")
 async def root():
