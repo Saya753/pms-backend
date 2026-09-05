@@ -6,6 +6,7 @@ from app.modules.projects.models import (
     ProjectMember,
     ProjectRole,
 )
+from app.modules.users.models import User
 
 
 class ProjectRepository:
@@ -180,17 +181,36 @@ class ProjectRepository:
     async def get_project_members(
         self,
         project_id: int,
-    ) -> list[ProjectMember]:
-
+    ):
         result = await self.db.execute(
-            select(ProjectMember)
+            select(
+                ProjectMember,
+                User.username,
+                User.full_name,
+            )
+            .join(
+                User,
+                User.id == ProjectMember.user_id,
+            )
             .where(
                 ProjectMember.project_id == project_id
             )
-            .order_by(ProjectMember.joined_at.asc())
         )
 
-        return list(result.scalars().all())
+        rows = result.all()
+
+        return [
+            {
+                "id": member.id,
+                "project_id": member.project_id,
+                "user_id": member.user_id,
+                "username": username,
+                "full_name": full_name,
+                "project_role": member.project_role,
+                "joined_at": member.joined_at,
+            }
+            for member, username, full_name in rows
+        ]
     
     async def update_project_member_role(
         self,

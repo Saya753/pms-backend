@@ -68,7 +68,12 @@ class ProjectMemberResponse(BaseModel):
     id: int
     project_id: int
     user_id: int
+
+    username: str
+    full_name: str | None
+
     project_role: ProjectRoleResponse
+
     joined_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
