@@ -275,17 +275,37 @@ class OrganizationRepository:
     async def get_organization_members(
         self,
         organization_id: int,
-    ) -> list[OrganizationMember]:
-
+    ):
         result = await self.db.execute(
-            select(OrganizationMember)
+            select(
+                OrganizationMember,
+                User.username,
+                User.full_name,
+            )
+            .join(
+                User,
+                User.id == OrganizationMember.user_id,
+            )
             .where(
                 OrganizationMember.organization_id == organization_id
             )
         )
 
-        return list(result.scalars().all())
-    
+        rows = result.all()
+
+        return [
+            {
+                "id": member.id,
+                "organization_id": member.organization_id,
+                "user_id": member.user_id,
+                "username": username,
+                "full_name": full_name,
+                "role": member.role,
+                "joined_at": member.joined_at,
+            }
+            for member, username, full_name in rows
+        ]
+        
     async def delete_member(
         self,
         member: OrganizationMember,

@@ -79,7 +79,12 @@ class OrganizationMemberResponse(BaseModel):
     id: int
     organization_id: int
     user_id: int
+
+    username: str
+    full_name: str | None
+
     role: RoleResponse
+
     joined_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
