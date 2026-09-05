@@ -374,3 +374,10 @@ class OrganizationRepository:
             )
         )
         return result.scalar_one_or_none()
+    
+    async def delete_organization(
+        self,
+        organization: Organization,
+    ):
+        await self.db.delete(organization)
+        await self.db.commit()

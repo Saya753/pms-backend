@@ -259,3 +259,24 @@ async def get_pending_invitation_count(
     return {
         "count": count,
     }
+    
+@organization_router.delete(
+    "/{organization_id}",
+)
+async def delete_organization(
+    organization_id: int,
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+    service = OrganizationService(db)
+
+    return await service.delete_organization(
+        organization_id=organization_id,
+        current_user_id=current_user.id,
+    )

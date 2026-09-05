@@ -630,3 +630,32 @@ class OrganizationService:
         return await self.repository.get_pending_invitation_count(
             user_id=current_user_id,
         )
+        
+    async def delete_organization(
+        self,
+        organization_id: int,
+        current_user_id: int,
+    ):
+        organization = await self.repository.get_organization(
+            organization_id=organization_id
+        )
+
+        if not organization:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found",
+            )
+
+        if organization.owner_id != current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the organization owner can delete the organization",
+            )
+
+        await self.repository.delete_organization(
+            organization
+        )
+
+        return {
+            "message": "Organization deleted successfully"
+        }
