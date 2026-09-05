@@ -11,7 +11,9 @@ class AttachmentRepository:
 
     async def create_attachment(
         self,
-        task_id: int,
+        *,
+        task_id: int | None = None,
+        project_id: int | None = None,
         uploaded_by: int,
         original_filename: str,
         stored_filename: str,
@@ -22,6 +24,7 @@ class AttachmentRepository:
 
         attachment = Attachment(
             task_id=task_id,
+            project_id=project_id,
             uploaded_by=uploaded_by,
             original_filename=original_filename,
             stored_filename=stored_filename,
@@ -38,8 +41,13 @@ class AttachmentRepository:
 
         return attachment
 
+    # ---------------------------------------------------------
+    # Task Attachments
+    # ---------------------------------------------------------
+
     async def get_attachment(
         self,
+        *,
         attachment_id: int,
         task_id: int,
     ) -> Attachment | None:
@@ -55,6 +63,7 @@ class AttachmentRepository:
 
     async def get_task_attachments(
         self,
+        *,
         task_id: int,
     ) -> list[Attachment]:
 
@@ -69,6 +78,48 @@ class AttachmentRepository:
         )
 
         return list(result.scalars().all())
+
+    # ---------------------------------------------------------
+    # Project Attachments
+    # ---------------------------------------------------------
+
+    async def get_project_attachment(
+        self,
+        *,
+        attachment_id: int,
+        project_id: int,
+    ) -> Attachment | None:
+
+        result = await self.db.execute(
+            select(Attachment).where(
+                Attachment.id == attachment_id,
+                Attachment.project_id == project_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+    async def get_project_attachments(
+        self,
+        *,
+        project_id: int,
+    ) -> list[Attachment]:
+
+        result = await self.db.execute(
+            select(Attachment)
+            .where(
+                Attachment.project_id == project_id,
+            )
+            .order_by(
+                Attachment.created_at.asc(),
+            )
+        )
+
+        return list(result.scalars().all())
+
+    # ---------------------------------------------------------
+    # Delete
+    # ---------------------------------------------------------
 
     async def delete_attachment(
         self,

@@ -23,7 +23,7 @@ from app.modules.comments.models import Comment
 from app.modules.attachments.models import Attachment
 from app.modules.activity_logs.models import ActivityLog
 from app.modules.notifications.models import Notification
-
+from app.modules.attachments.models import Attachment
 
 __all__ = [
     "Base",

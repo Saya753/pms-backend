@@ -14,7 +14,10 @@ from app.modules.tasks.controllers import (
     my_task_router,
 )
 from app.modules.comments.controllers import comment_router
-from app.modules.attachments.controllers import attachment_router
+from app.modules.attachments.controllers import (
+    task_attachment_router,
+    project_attachment_router,
+)
 from app.modules.activity_logs.controllers import activity_log_router
 from app.modules.notifications.controllers import router as notifications_router
 
@@ -25,14 +28,21 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+
 app.include_router(organization_router)
+
 app.include_router(project_router)
 app.include_router(my_project_router)
+app.include_router(project_attachment_router)
+
 app.include_router(task_router)
 app.include_router(my_task_router)
+app.include_router(task_attachment_router)
+
 app.include_router(comment_router)
-app.include_router(attachment_router)
+
 app.include_router(activity_log_router)
+
 app.include_router(notifications_router)
 
 @app.get("/")

@@ -9,20 +9,29 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.modules.attachments.schemas import AttachmentResponse
 from app.modules.attachments.services import AttachmentService
-from app.core.dependencies import get_current_user
 from app.modules.users.models import User
 
 
-attachment_router = APIRouter(
-    prefix="/organizations/{organization_id}/projects/{project_id}/tasks/{task_id}/attachments",
-    tags=["Attachments"],
+# =========================================================
+# Task Attachments Router
+# =========================================================
+
+task_attachment_router = APIRouter(
+    prefix=(
+        "/organizations/{organization_id}"
+        "/projects/{project_id}"
+        "/tasks/{task_id}"
+        "/attachments"
+    ),
+    tags=["Task Attachments"],
 )
 
 
-@attachment_router.post(
+@task_attachment_router.post(
     "",
     response_model=AttachmentResponse,
     status_code=201,
@@ -52,7 +61,7 @@ async def upload_attachment(
     )
 
 
-@attachment_router.get(
+@task_attachment_router.get(
     "",
     response_model=list[AttachmentResponse],
 )
@@ -79,7 +88,7 @@ async def get_task_attachments(
     )
 
 
-@attachment_router.get(
+@task_attachment_router.get(
     "/{attachment_id}",
 )
 async def download_attachment(
@@ -109,11 +118,14 @@ async def download_attachment(
     return FileResponse(
         path=attachment.file_path,
         filename=attachment.original_filename,
-        media_type=attachment.content_type or "application/octet-stream",
+        media_type=(
+            attachment.content_type
+            or "application/octet-stream"
+        ),
     )
 
 
-@attachment_router.delete(
+@task_attachment_router.delete(
     "/{attachment_id}",
     status_code=204,
 )
@@ -137,6 +149,137 @@ async def delete_attachment(
         organization_id=organization_id,
         project_id=project_id,
         task_id=task_id,
+        attachment_id=attachment_id,
+        current_user_id=current_user.id,
+    )
+
+    return None
+
+
+# =========================================================
+# Project Attachments Router
+# =========================================================
+
+project_attachment_router = APIRouter(
+    prefix=(
+        "/organizations/{organization_id}"
+        "/projects/{project_id}"
+        "/attachments"
+    ),
+    tags=["Project Attachments"],
+)
+
+
+@project_attachment_router.post(
+    "",
+    response_model=AttachmentResponse,
+    status_code=201,
+)
+async def upload_project_attachment(
+    organization_id: int,
+    project_id: int,
+    file: Annotated[UploadFile, File()],
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+    service = AttachmentService(db)
+
+    return await service.upload_project_attachment(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+        file=file,
+    )
+
+
+@project_attachment_router.get(
+    "",
+    response_model=list[AttachmentResponse],
+)
+async def get_project_attachments(
+    organization_id: int,
+    project_id: int,
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+    service = AttachmentService(db)
+
+    return await service.get_project_attachments(
+        organization_id=organization_id,
+        project_id=project_id,
+        current_user_id=current_user.id,
+    )
+
+
+@project_attachment_router.get(
+    "/{attachment_id}",
+)
+async def download_project_attachment(
+    organization_id: int,
+    project_id: int,
+    attachment_id: int,
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+    service = AttachmentService(db)
+
+    attachment = await service.get_project_attachment(
+        organization_id=organization_id,
+        project_id=project_id,
+        attachment_id=attachment_id,
+        current_user_id=current_user.id,
+    )
+
+    return FileResponse(
+        path=attachment.file_path,
+        filename=attachment.original_filename,
+        media_type=(
+            attachment.content_type
+            or "application/octet-stream"
+        ),
+    )
+
+
+@project_attachment_router.delete(
+    "/{attachment_id}",
+    status_code=204,
+)
+async def delete_project_attachment(
+    organization_id: int,
+    project_id: int,
+    attachment_id: int,
+    current_user: Annotated[
+        User,
+        Depends(get_current_user),
+    ],
+    db: Annotated[
+        AsyncSession,
+        Depends(get_db),
+    ],
+):
+    service = AttachmentService(db)
+
+    await service.delete_project_attachment(
+        organization_id=organization_id,
+        project_id=project_id,
         attachment_id=attachment_id,
         current_user_id=current_user.id,
     )

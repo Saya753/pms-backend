@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -21,9 +22,15 @@ class Attachment(Base):
         index=True,
     )
 
-    task_id: Mapped[int] = mapped_column(
+    task_id: Mapped[int | None] = mapped_column(
         ForeignKey("tasks.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
 
@@ -70,4 +77,13 @@ class Attachment(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "(task_id IS NOT NULL AND project_id IS NULL) "
+            "OR "
+            "(task_id IS NULL AND project_id IS NOT NULL)",
+            name="ck_attachment_task_or_project",
+        ),
     )
