@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 
-from app.modules.reports.excel import create_report_excel
+from app.modules.reports.excel import (
+    create_general_report_excel,
+    create_project_report_excel,
+)
 from app.modules.reports.schemas import ReportsResponse
 from app.modules.reports.services import ReportsService
 from app.modules.users.models import User
@@ -113,8 +116,9 @@ async def export_general_report_excel(
         project_ids=project_ids
     )
 
-    excel_file = create_report_excel(
+    excel_file = create_general_report_excel(
         report=report,
+        projects=projects,
         tasks=tasks,
     )
 
@@ -169,8 +173,9 @@ async def export_project_report_excel(
         project_ids=[project.id]
     )
 
-    excel_file = create_report_excel(
+    excel_file = create_project_report_excel(
         report=report,
+        project=project,
         tasks=tasks,
     )
 
