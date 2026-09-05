@@ -197,9 +197,6 @@ async def delete_project(
 # =========================================================
 # SEARCH ORGANIZATION MEMBERS
 # =========================================================
-# IMPORTANT:
-# This route is defined before /{project_id}/members
-# to keep the routing explicit and avoid ambiguity.
 
 @project_router.get(
     "/members/search",
