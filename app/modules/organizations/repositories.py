@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-
+from sqlalchemy.orm import selectinload
 from app.modules.users.models import User
 
 from app.modules.organizations.models import (
@@ -253,10 +253,11 @@ class OrganizationRepository:
         user_id: int,
     ) -> list[OrganizationInvitation]:
 
-        print("GETTING INVITATIONS FOR USER:", user_id)
-
         result = await self.db.execute(
             select(OrganizationInvitation)
+            .options(
+                selectinload(OrganizationInvitation.role),
+            )
             .where(
                 OrganizationInvitation.invited_user_id == user_id,
                 OrganizationInvitation.status == "PENDING",
@@ -266,11 +267,7 @@ class OrganizationRepository:
             )
         )
 
-        invitations = list(result.scalars().all())
-
-        print("FOUND INVITATIONS:", invitations)
-
-        return invitations
+        return list(result.scalars().all())
     
     async def get_organization_members(
         self,
@@ -304,3 +301,42 @@ class OrganizationRepository:
         await self.db.refresh(member)
 
         return member
+    
+    async def get_pending_invitation_count(
+        self,
+        user_id: int,
+    ) -> int:
+
+        result = await self.db.execute(
+            select(func.count(OrganizationInvitation.id))
+            .where(
+                OrganizationInvitation.invited_user_id == user_id,
+                OrganizationInvitation.status == "PENDING",
+            )
+        )
+
+        return result.scalar_one()
+    
+    async def get_organization(
+        self,
+        organization_id: int,
+    ) -> Organization | None:
+
+        result = await self.db.execute(
+            select(Organization)
+            .where(Organization.id == organization_id)
+        )
+
+        return result.scalar_one_or_none()
+    
+    async def get_user_by_id(
+        self,
+        user_id: int,
+    ) -> User | None:
+
+        result = await self.db.execute(
+            select(User)
+            .where(User.id == user_id)
+        )
+
+        return result.scalar_one_or_none()

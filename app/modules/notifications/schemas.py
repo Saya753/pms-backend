@@ -9,6 +9,7 @@ class NotificationResponse(BaseModel):
     organization_id: int | None
     project_id: int | None
     task_id: int | None
+    invitation_id: int | None
     type: str
     title: str
     message: str

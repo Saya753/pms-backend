@@ -15,6 +15,7 @@ from app.modules.organizations.schemas import (
     OrganizationInvitationResponse,
     OrganizationMemberResponse,
     OrganizationMemberRoleUpdate,
+    PendingInvitationCountResponse
 )
 
 from app.modules.organizations.services import (
@@ -236,3 +237,22 @@ async def update_organization_member_role(
         current_user_id=current_user.id,
         role_name=data.role,
     )
+    
+@organization_router.get(
+    "/users/me/invitations/pending-count",
+    response_model=PendingInvitationCountResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_pending_invitation_count(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = OrganizationService(db)
+
+    count = await service.get_pending_invitation_count(
+        current_user_id=current_user.id,
+    )
+
+    return {
+        "count": count,
+    }

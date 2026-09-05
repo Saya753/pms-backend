@@ -17,6 +17,7 @@ class NotificationRepository:
         organization_id: int | None,
         project_id: int | None,
         task_id: int | None,
+        invitation_id: int | None,
         notification_type: str,
         title: str,
         message: str,
@@ -27,6 +28,7 @@ class NotificationRepository:
             organization_id=organization_id,
             project_id=project_id,
             task_id=task_id,
+            invitation_id=invitation_id,
             type=notification_type,
             title=title,
             message=message,
@@ -123,3 +125,22 @@ class NotificationRepository:
         )
 
         return result.scalar_one()
+    
+    async def get_notification_by_invitation(
+        self,
+        invitation_id: int,
+        user_id: int,
+    ) -> Notification | None:
+
+        result = await self.db.execute(
+            select(Notification)
+            .where(
+                Notification.invitation_id == invitation_id,
+                Notification.user_id == user_id,
+            )
+            .order_by(
+                Notification.created_at.desc()
+            )
+        )
+
+        return result.scalars().first()

@@ -16,6 +16,7 @@ from app.modules.organizations.schemas import (
     OrganizationCreate,
     InvitationCreate,
 )
+from app.modules.notifications.repositories import NotificationRepository
 
 
 class OrganizationService:
@@ -23,6 +24,7 @@ class OrganizationService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repository = OrganizationRepository(db)
+        self.notification_repository = NotificationRepository(db)
 
     async def create(
         self,
@@ -98,7 +100,18 @@ class OrganizationService:
                 detail="You do not have permission to invite members",
             )
 
-        # 2. پیدا کردن کاربر با username
+        # 2. پیدا کردن Organization
+        organization = await self.repository.get_organization(
+            organization_id=organization_id,
+        )
+
+        if not organization:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found",
+            )
+
+        # 3. پیدا کردن کاربر با username
         invited_user = await self.repository.get_user_by_username(
             data.username
         )
@@ -109,14 +122,25 @@ class OrganizationService:
                 detail="User not found",
             )
 
-        # 3. جلوگیری از دعوت خود کاربر
+        # 4. پیدا کردن دعوت‌کننده
+        inviter = await self.repository.get_user_by_id(
+            current_user_id
+        )
+
+        if not inviter:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Inviter not found",
+            )
+
+        # 5. جلوگیری از دعوت خود کاربر
         if invited_user.id == current_user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You cannot invite yourself",
             )
 
-        # 4. بررسی عضویت قبلی
+        # 6. بررسی عضویت قبلی
         existing_member = await self.repository.get_member(
             organization_id=organization_id,
             user_id=invited_user.id,
@@ -128,7 +152,7 @@ class OrganizationService:
                 detail="User is already a member of this organization",
             )
 
-        # 5. بررسی Invitation در وضعیت PENDING
+        # 7. بررسی Invitation در وضعیت PENDING
         existing_invitation = (
             await self.repository.get_pending_invitation(
                 organization_id=organization_id,
@@ -142,8 +166,10 @@ class OrganizationService:
                 detail="A pending invitation already exists",
             )
 
-        # 6. بررسی Role
-        role = await self.repository.get_role_by_name(data.role.upper())
+        # 8. بررسی Role
+        role = await self.repository.get_role_by_name(
+            data.role.upper()
+        )
 
         if not role:
             raise HTTPException(
@@ -162,7 +188,7 @@ class OrganizationService:
                 detail="Invalid organization role",
             )
 
-        # 7. ساخت Invitation
+        # 9. ساخت Invitation
         invitation = await self.repository.create_invitation(
             organization_id=organization_id,
             invited_user_id=invited_user.id,
@@ -170,9 +196,23 @@ class OrganizationService:
             role_id=role.id,
         )
 
-        await self.db.commit()
+        # 10. ساخت Notification
+        inviter_name = inviter.full_name
+        organization_name = organization.name
 
-        await self.db.refresh(invitation)
+        await self.notification_repository.create_notification(
+            user_id=invited_user.id,
+            organization_id=organization.id,
+            project_id=None,
+            task_id=None,
+            invitation_id=invitation.id,
+            notification_type="ORGANIZATION_INVITATION",
+            title="دعوت‌نامه جدید",
+            message=(
+                f'{inviter_name} شما را به سازمان '
+                f'"{organization_name}" دعوت کرده است.'
+            ),
+        )
 
         return invitation
     
@@ -240,18 +280,34 @@ class OrganizationService:
                 detail="You are already a member of this organization",
             )
 
+        # ساخت Organization Member
         await self.repository.create_member(
             organization_id=invitation.organization_id,
             user_id=user_id,
             role_id=invitation.role_id,
         )
 
+        # تغییر وضعیت Invitation
         await self.repository.update_invitation(
             invitation,
             "ACCEPTED",
         )
 
         await self.db.commit()
+
+        # Read کردن Notification مربوط به همین Invitation
+        notification = (
+            await self.notification_repository
+            .get_notification_by_invitation(
+                invitation_id=invitation.id,
+                user_id=user_id,
+            )
+        )
+
+        if notification:
+            await self.notification_repository.mark_as_read(
+                notification
+            )
 
         return invitation
     
@@ -290,8 +346,22 @@ class OrganizationService:
 
         await self.db.commit()
 
+        # Read کردن Notification مربوط به همین Invitation
+        notification = (
+            await self.notification_repository
+            .get_notification_by_invitation(
+                invitation_id=invitation.id,
+                user_id=user_id,
+            )
+        )
+
+        if notification:
+            await self.notification_repository.mark_as_read(
+                notification
+            )
+
         return invitation
-    
+        
     async def get_organization_members(
         self,
         organization_id: int,
@@ -451,3 +521,12 @@ class OrganizationService:
         await self.db.refresh(updated_member)
 
         return updated_member
+    
+    async def get_pending_invitation_count(
+        self,
+        current_user_id: int,
+    ) -> int:
+
+        return await self.repository.get_pending_invitation_count(
+            user_id=current_user_id,
+        )

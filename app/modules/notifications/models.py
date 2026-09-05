@@ -38,6 +38,12 @@ class Notification(Base):
         index=True,
     )
 
+    invitation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organization_invitations.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
