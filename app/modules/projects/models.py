@@ -43,12 +43,14 @@ class Project(Base):
         String(50),
         default="PLANNING",
         nullable=False,
+        index=True,
     )
 
     priority: Mapped[str] = mapped_column(
         String(50),
         default="MEDIUM",
         nullable=False,
+        index=True,
     )
 
     start_date: Mapped[date | None] = mapped_column(
@@ -78,8 +80,8 @@ class Project(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    
-    
+
+
 class ProjectRole(Base):
     __tablename__ = "project_roles"
 
@@ -99,8 +101,8 @@ class ProjectRole(Base):
         Text,
         nullable=True,
     )
-    
-    
+
+
 class ProjectMember(Base):
     __tablename__ = "project_members"
 
