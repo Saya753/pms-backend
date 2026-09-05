@@ -247,11 +247,12 @@ class OrganizationRepository:
         )
 
         return result.scalar_one_or_none()
-    
+        
     async def get_my_invitations(
         self,
         user_id: int,
     ) -> list[OrganizationInvitation]:
+        print("GETTING INVITATIONS FOR USER:", user_id)
 
         result = await self.db.execute(
             select(OrganizationInvitation)
@@ -262,12 +263,14 @@ class OrganizationRepository:
                 OrganizationInvitation.invited_user_id == user_id,
                 OrganizationInvitation.status == "PENDING",
             )
-            .order_by(
-                OrganizationInvitation.created_at.desc()
-            )
+            .order_by(OrganizationInvitation.created_at.desc())
         )
 
-        return list(result.scalars().all())
+        invitations = list(result.scalars().all())
+
+        print("FOUND INVITATIONS:", invitations)
+
+        return invitations
     
     async def get_organization_members(
         self,
@@ -339,4 +342,15 @@ class OrganizationRepository:
             .where(User.id == user_id)
         )
 
+        return result.scalar_one_or_none()
+    
+    async def get_organization(
+        self,
+        organization_id: int,
+    ) -> Organization | None:
+        result = await self.db.execute(
+            select(Organization).where(
+                Organization.id == organization_id
+            )
+        )
         return result.scalar_one_or_none()

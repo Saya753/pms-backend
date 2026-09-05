@@ -104,8 +104,8 @@ async def invite_member(
         data=data,
         current_user_id=current_user.id,
     )
-    
-    
+
+
 @organization_router.get(
     "/invitations",
     response_model=list[OrganizationInvitationResponse],
@@ -115,6 +115,7 @@ async def get_my_invitations(
         User,
         Depends(get_current_user),
     ],
+
     db: Annotated[
         AsyncSession,
         Depends(get_db),
@@ -124,9 +125,10 @@ async def get_my_invitations(
     service = OrganizationService(db)
 
     return await service.get_my_invitations(
-        user_id=current_user.id
+        current_user_id=current_user.id
     )
-    
+
+
 @organization_router.post(
     "/invitations/{invitation_id}/accept",
     response_model=OrganizationInvitationResponse,
@@ -151,7 +153,8 @@ async def accept_invitation(
         invitation_id=invitation_id,
         user_id=current_user.id,
     )
-    
+
+
 @organization_router.post(
     "/invitations/{invitation_id}/reject",
     response_model=OrganizationInvitationResponse,

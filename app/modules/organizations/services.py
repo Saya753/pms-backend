@@ -79,13 +79,55 @@ class OrganizationService:
         return await self.repository.get_user_organizations(
             user_id
         )
-        
+    # ---------------------------------------------------------
+    # Invitation Response Helper
+    # ---------------------------------------------------------
+
+    async def _build_invitation_response(
+        self,
+        invitation: OrganizationInvitation,
+    ) -> dict:
+
+        organization = await self.repository.get_organization(
+            invitation.organization_id
+        )
+
+        inviter = await self.repository.get_user_by_id(
+            invitation.invited_by
+        )
+
+        return {
+            "id": invitation.id,
+            "organization_id": invitation.organization_id,
+            "invited_user_id": invitation.invited_user_id,
+            "invited_by": invitation.invited_by,
+            "role": invitation.role,
+            "status": invitation.status,
+            "created_at": invitation.created_at,
+            "expires_at": invitation.expires_at,
+            "responded_at": invitation.responded_at,
+            "organization_name": (
+                organization.name
+                if organization
+                else "Unknown Organization"
+            ),
+            "inviter_name": (
+                inviter.full_name
+                if inviter and inviter.full_name
+                else "Unknown User"
+            ),
+        }
+
+    # ---------------------------------------------------------
+    # Invite Member
+    # ---------------------------------------------------------
+
     async def invite_member(
         self,
         organization_id: int,
         data: InvitationCreate,
         current_user_id: int,
-    ) -> OrganizationInvitation:
+    ):
 
         # 1. بررسی Permission
         has_permission = await self.repository.member_has_permission(
@@ -122,7 +164,14 @@ class OrganizationService:
                 detail="User not found",
             )
 
-        # 4. پیدا کردن دعوت‌کننده
+        # 4. جلوگیری از دعوت خود کاربر
+        if invited_user.id == current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot invite yourself",
+            )
+
+        # 5. پیدا کردن دعوت‌کننده
         inviter = await self.repository.get_user_by_id(
             current_user_id
         )
@@ -131,13 +180,6 @@ class OrganizationService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Inviter not found",
-            )
-
-        # 5. جلوگیری از دعوت خود کاربر
-        if invited_user.id == current_user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You cannot invite yourself",
             )
 
         # 6. بررسی عضویت قبلی
@@ -152,7 +194,7 @@ class OrganizationService:
                 detail="User is already a member of this organization",
             )
 
-        # 7. بررسی Invitation در وضعیت PENDING
+        # 7. بررسی Invitation قبلی در وضعیت PENDING
         existing_invitation = (
             await self.repository.get_pending_invitation(
                 organization_id=organization_id,
@@ -166,7 +208,7 @@ class OrganizationService:
                 detail="A pending invitation already exists",
             )
 
-        # 8. بررسی Role
+        # 8. پیدا کردن Role
         role = await self.repository.get_role_by_name(
             data.role.upper()
         )
@@ -177,6 +219,7 @@ class OrganizationService:
                 detail="Role not found",
             )
 
+        # فقط این Roleها برای Organization Invitation مجاز هستند
         allowed_organization_roles = {
             "ADMIN",
             "MEMBER",
@@ -197,7 +240,12 @@ class OrganizationService:
         )
 
         # 10. ساخت Notification
-        inviter_name = inviter.full_name
+        inviter_name = (
+            inviter.full_name
+            if inviter.full_name
+            else "Unknown User"
+        )
+
         organization_name = organization.name
 
         await self.notification_repository.create_notification(
@@ -214,23 +262,49 @@ class OrganizationService:
             ),
         )
 
-        return invitation
-    
+        # 11. Response کامل
+        return await self._build_invitation_response(
+            invitation
+        )
+
+    # ---------------------------------------------------------
+    # Get My Invitations
+    # ---------------------------------------------------------
+
     async def get_my_invitations(
         self,
-        user_id: int,
-    ) -> list[OrganizationInvitation]:
+        current_user_id: int,
+    ):
 
-        return await self.repository.get_my_invitations(
-            user_id=user_id
+        invitations = await self.repository.get_my_invitations(
+            user_id=current_user_id
         )
-        
+
+        result = []
+
+        for invitation in invitations:
+
+            invitation_response = (
+                await self._build_invitation_response(
+                    invitation
+                )
+            )
+
+            result.append(invitation_response)
+
+        return result
+
+    # ---------------------------------------------------------
+    # Accept Invitation
+    # ---------------------------------------------------------
+
     async def accept_invitation(
         self,
         invitation_id: int,
         user_id: int,
-    ) -> OrganizationInvitation:
+    ):
 
+        # 1. پیدا کردن Invitation
         invitation = await self.repository.get_invitation(
             invitation_id
         )
@@ -241,22 +315,27 @@ class OrganizationService:
                 detail="Invitation not found",
             )
 
+        # 2. بررسی اینکه Invitation متعلق به همین User است
         if invitation.invited_user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This invitation does not belong to you",
             )
 
+        # 3. فقط Invitationهای PENDING قابل قبول هستند
         if invitation.status != "PENDING":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invitation is no longer pending",
             )
 
+        # 4. بررسی Expiration
         if invitation.expires_at:
+
             now = datetime.now(timezone.utc)
 
             if invitation.expires_at <= now:
+
                 await self.repository.update_invitation(
                     invitation,
                     "EXPIRED",
@@ -269,6 +348,7 @@ class OrganizationService:
                     detail="Invitation has expired",
                 )
 
+        # 5. بررسی عضویت قبلی
         existing_member = await self.repository.get_member(
             organization_id=invitation.organization_id,
             user_id=user_id,
@@ -280,22 +360,20 @@ class OrganizationService:
                 detail="You are already a member of this organization",
             )
 
-        # ساخت Organization Member
+        # 6. ساخت Organization Member
         await self.repository.create_member(
             organization_id=invitation.organization_id,
             user_id=user_id,
             role_id=invitation.role_id,
         )
 
-        # تغییر وضعیت Invitation
+        # 7. تغییر وضعیت Invitation
         await self.repository.update_invitation(
             invitation,
             "ACCEPTED",
         )
 
-        await self.db.commit()
-
-        # Read کردن Notification مربوط به همین Invitation
+        # 8. پیدا کردن Notification مربوط به Invitation
         notification = (
             await self.notification_repository
             .get_notification_by_invitation(
@@ -304,19 +382,32 @@ class OrganizationService:
             )
         )
 
+        # 9. Mark Notification as Read
         if notification:
+
             await self.notification_repository.mark_as_read(
                 notification
             )
 
-        return invitation
-    
+        # 10. Commit نهایی
+        await self.db.commit()
+
+        # 11. Response کامل
+        return await self._build_invitation_response(
+            invitation
+        )
+
+    # ---------------------------------------------------------
+    # Reject Invitation
+    # ---------------------------------------------------------
+
     async def reject_invitation(
         self,
         invitation_id: int,
         user_id: int,
-    ) -> OrganizationInvitation:
+    ):
 
+        # 1. پیدا کردن Invitation
         invitation = await self.repository.get_invitation(
             invitation_id
         )
@@ -327,26 +418,27 @@ class OrganizationService:
                 detail="Invitation not found",
             )
 
+        # 2. بررسی مالکیت Invitation
         if invitation.invited_user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This invitation does not belong to you",
             )
 
+        # 3. بررسی وضعیت
         if invitation.status != "PENDING":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invitation is no longer pending",
             )
 
+        # 4. تغییر وضعیت
         await self.repository.update_invitation(
             invitation,
             "REJECTED",
         )
 
-        await self.db.commit()
-
-        # Read کردن Notification مربوط به همین Invitation
+        # 5. پیدا کردن Notification
         notification = (
             await self.notification_repository
             .get_notification_by_invitation(
@@ -355,13 +447,21 @@ class OrganizationService:
             )
         )
 
+        # 6. Mark Notification as Read
         if notification:
+
             await self.notification_repository.mark_as_read(
                 notification
             )
 
-        return invitation
-        
+        # 7. Commit نهایی
+        await self.db.commit()
+
+        # 8. Response کامل
+        return await self._build_invitation_response(
+            invitation
+        )
+            
     async def get_organization_members(
         self,
         organization_id: int,
