@@ -10,9 +10,10 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+# from app.modules.users.models import User
 
 
 class Task(Base):
@@ -30,7 +31,7 @@ class Task(Base):
     )
 
     # NULL = Main Task
-    # ID  = Subtask of that Task
+    # ID = Subtask of that Task
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=True,
@@ -77,6 +78,12 @@ class Task(Base):
         nullable=True,
     )
 
+    # Estimated work time in minutes
+    estimated_minutes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
     assignee_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -108,4 +115,90 @@ class Task(Base):
             "title",
             name="uq_task_project_title",
         ),
+    )
+
+    # -----------------------------
+    # Relationships
+    # -----------------------------
+
+    parent: Mapped["Task | None"] = relationship(
+        "Task",
+        remote_side=[id],
+        foreign_keys=[parent_id],
+        back_populates="subtasks",
+    )
+
+    subtasks: Mapped[list["Task"]] = relationship(
+        "Task",
+        foreign_keys=[parent_id],
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+
+    assignee: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[assignee_id],
+        lazy="selectin",
+    )
+
+    creator: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[created_by],
+        lazy="selectin",
+    )
+
+    checkpoints: Mapped[list["TaskCheckpoint"]] = relationship(
+        "TaskCheckpoint",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        order_by="TaskCheckpoint.position",
+    )
+
+
+class TaskCheckpoint(Base):
+    __tablename__ = "task_checkpoints"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(300),
+        nullable=False,
+    )
+
+    is_completed: Mapped[bool] = mapped_column(
+        default=False,
+        nullable=False,
+    )
+
+    position: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    task: Mapped["Task"] = relationship(
+        "Task",
+        back_populates="checkpoints",
     )
