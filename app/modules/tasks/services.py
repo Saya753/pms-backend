@@ -771,7 +771,6 @@ class TaskService:
 
     async def update_my_task(
         self,
-        organization_id: int,
         task_id: int,
         current_user_id: int,
         data: MyTaskUpdate,
